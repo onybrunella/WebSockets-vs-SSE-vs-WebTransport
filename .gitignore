@@ -1,0 +1,16 @@
+# Données d'expérience
+data/*.csv
+data/experiment-config.json
+!data/.gitkeep
+
+# Certificats TLS locaux
+backend/cert.pem
+backend/key.pem
+
+# Dépendances et builds
+node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE
+.idea/

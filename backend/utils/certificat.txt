@@ -1,0 +1,56 @@
+# Certificat WebTransport (développement local)
+
+Chromium n'accepte PAS les certificats RSA avec serverCertificateHashes.
+Il faut un certificat ECDSA valide moins de 14 jours.
+
+## Génération (recommandé)
+
+cd backend
+chmod +x utils/generate-cert.sh utils/wt-host.sh
+./utils/generate-cert.sh
+
+Met à jour cert.pem, key.pem et frontend/src/app/wt-config.ts (hash + IP).
+
+## WSL2 + Chrome Windows (cause fréquente de ERR_CONNECTION_REFUSED)
+
+Le pont WSL2 ne forwarde pas bien l’UDP fragmenté (QUIC) vers localhost.
+Réf. : https://github.com/microsoft/WSL/issues/6351
+
+À faire :
+1. IP WSL : ip -4 addr show eth0  (ex. 172.x.x.x)
+2. ./utils/generate-cert.sh  (ajoute cette IP au certificat)
+3. Serveur : host 0.0.0.0 (déjà dans webtransport-server.js)
+4. Frontend : ng serve --host 0.0.0.0
+5. Chrome Windows : ouvrir http://172.x.x.x:4200 (PAS http://localhost:4200)
+6. WebTransport : https://172.x.x.x:3003/webtransport (même hôte que la barre d’adresse)
+
+Le dashboard utilise window.location.hostname + serverCertificateHashes.
+
+http://172.x.x.x:4200 n’est PAS un contexte sécurisé → WebTransport is not defined.
+Obligatoire en dev : lancer Chrome avec
+  --unsafely-treat-insecure-origin-as-secure=http://<IP>:4200
+(via ./utils/launch-chrome-webtransport.sh sous Linux/WSL)
+
+## ERR_QUIC_PROTOCOL_ERROR / CERTIFICATE_VERIFY_FAILED
+
+Chrome refuse souvent le certificat **QUIC/UDP** auto-signé même avec serverCertificateHashes.
+
+Le serveur utilise maintenant **Http2Server (TLS TCP)** + le frontend **WebTransportPolyfill**
+(QUIC natif → si échec → **wss://IP:3003/webtransport**).
+
+À faire :
+1. ./utils/generate-cert.sh puis redémarrer npm run webtransport
+2. Chrome avec ./utils/launch-chrome-webtransport.sh (ou .ps1 sous Windows)
+   inclut --ignore-certificate-errors pour le wss de secours
+3. Hash SPKI dans wt-config.ts = clé publique (openssl commande du script)
+
+Si l’erreur QUIC persiste dans la console, le polyfill doit basculer sur wss après ~2 s.
+Vérifier « Client connecté via WebTransport (HTTP/2 + WebSocket) » dans le terminal serveur.
+
+Option WSL (.wslconfig) parfois utile :
+  networkingMode=mirrored
+  hostAddressLoopback=true
+
+## Hash SPKI manuel
+
+openssl x509 -in cert.pem -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64

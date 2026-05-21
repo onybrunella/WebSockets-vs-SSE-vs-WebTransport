@@ -2,6 +2,7 @@ import { Http2Server } from '@fails-components/webtransport';
 import { readFileSync } from 'fs';
 import { networkInterfaces } from 'os';
 import { execSync } from 'child_process';
+import { buildMessage, startPushLoop } from './lib/push-loop.js';
 
 const PORT = 3003;
 
@@ -48,22 +49,14 @@ async function handleSession(session) {
         const writer = session.datagrams.writable.getWriter();
         const encoder = new TextEncoder();
 
-        const interval = setInterval(async () => {
-            try {
-                const message = {
-                    protocol: 'webtransport',
-                    timestamp: Date.now(),
-                    value: Math.random() * 100
-                };
-                await writer.write(encoder.encode(JSON.stringify(message)));
-            } catch {
-                clearInterval(interval);
-            }
-        }, 1000);
+        const stop = startPushLoop(async () => {
+            const message = buildMessage('webtransport');
+            await writer.write(encoder.encode(JSON.stringify(message)));
+        });
 
         session.closed.then(() => {
             console.log('Client déconnecté');
-            clearInterval(interval);
+            stop();
             writer.close().catch(() => {});
         });
     } catch (err) {
