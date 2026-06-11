@@ -1,4 +1,4 @@
-import { getIntervalMs } from './config-store.js';
+import { getIntervalMs, getPaused } from './config-store.js';
 
 export function buildMessage(protocol) {
   return {
@@ -8,20 +8,22 @@ export function buildMessage(protocol) {
   };
 }
 
-/** Boucle d'envoi ; l'intervalle suit config-store (partagé entre les 3 serveurs). */
+// Boucle d'envoi — lit l'intervalle dans config-store (partagé entre les 3 serveurs)
 export function startPushLoop(send) {
   let stopped = false;
   let timer = null;
 
   const tick = async () => {
     if (stopped) return;
-    try {
-      await send();
-    } catch {
-      /* connexion fermée */
+    if (!getPaused()) {
+      try {
+        await send();
+      } catch {
+        /* connexion fermée */
+      }
     }
     if (!stopped) {
-      timer = setTimeout(tick, getIntervalMs());
+      timer = setTimeout(tick, getPaused() ? 250 : getIntervalMs());
     }
   };
 

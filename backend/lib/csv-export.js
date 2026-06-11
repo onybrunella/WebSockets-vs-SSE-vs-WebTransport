@@ -3,7 +3,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-export const DATA_DIR = join(__dirname, '../../data');
+const DATA_DIR = join(__dirname, '../../data');
 
 export function measurementsToCsv(measurements) {
   const header = 'Protocol,Latency(ms),Value,Timestamp(ms)\n';

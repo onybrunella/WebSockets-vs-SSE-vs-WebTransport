@@ -1,64 +1,51 @@
 # Comparaison WebSocket / SSE / WebTransport
 
-Banc de test pour mesurer latence et débit (dashboard Angular + 3 serveurs Node.js).
+Petit banc de test pour mesurer latence et débit : dashboard Angular + 3 serveurs Node.
 
-## Démarrage
+## Lancer le projet
+
+Il faut 4 terminaux :
 
 ```bash
-# Terminaux 1–3 — backend
+# backend (x3)
 cd backend && npm install
-npm run websocket    # port 3001
-npm run sse          # port 3002
-npm run webtransport # port 3003 (certificat requis)
+npm run websocket      # 3001
+npm run sse            # 3002 — config + export CSV
+npm run webtransport   # 3003
 
-# Terminal 4 — frontend
+# frontend
 cd frontend && npm install
-npm start            # http://localhost:4200
+npm start              # http://localhost:4200
 ```
 
-Certificat WebTransport (première fois) :
+WebTransport : générer le certificat une fois avec `cd backend && npm run setup:wt`.  
+Sous WSL, voir `backend/utils/certificat.txt` et `./backend/utils/launch-chrome-webtransport.sh`.
 
-```bash
-cd backend && npm run setup:wt
-```
+## Les 4 expériences
 
-Sous WSL2 : voir [backend/utils/certificat.txt](backend/utils/certificat.txt) et `./backend/utils/launch-chrome-webtransport.sh`.
+| Exp | But |
+|-----|-----|
+| 1 | Latence à 1 msg/s, 2 min |
+| 2 | Latence à 1 / 10 / 50 / 100 msg/s (1 min par palier) |
+| 3 | Coupure réseau 5 s + temps de reconnexion |
+| 4 | Comparaison qualitative du code → `data/exp4-integration.md` |
 
-## Protocole des expériences
-
-Les boutons **Préparer exp. N** règlent la fréquence et le préfixe du fichier CSV. Après chaque mesure : **Exporter CSV** (ou **Exporter journal exp. 3**).
-
-| Exp. | Objectif | Déroulement dashboard | Analyse |
-|------|----------|----------------------|---------|
-| **1** | Baseline latence | Préparer exp. 1 → Connecter les 3 → 2 min → Exporter CSV | `python3 data/analyze-experiments.py` |
-| **2** | Latence sous charge | Chaque palier (1/10/50/100 msg/s) → Reconnecter les 3 → 1 min → Exporter | idem |
-| **3** | Coupure réseau 5 s | Préparer exp. 3 → Connecter → 30 s → Marquer coupure + `sudo ./utils/simulate-network-cut.sh 5` → Exporter journal | idem + noter comportement UI |
-| **4** | Complexité intégration | Comparer le code et remplir [data/exp4-integration.md](data/exp4-integration.md) | grille qualitative |
-
-### Expérience 3 — coupure réseau
+Le déroulé détaillé est dans le dashboard (onglets Exp. 1 / 2 / 3).  
+Pour l'exp. 3, coupure réseau :
 
 ```bash
 cd backend
 sudo ./utils/simulate-network-cut.sh 5
 ```
 
-Détail : [data/exp3-protocol.md](data/exp3-protocol.md).
+Analyse des CSV : `python3 data/analyze-experiments.py`
 
-## Exports
+## Fichiers exportés
 
-Les CSV sont enregistrés dans `data/` :
+Tout part dans `data/` : `exp1_*.csv`, `exp2_*msg_*.csv`, `exp3_log_*.csv`
 
-- `exp1_*.csv` — latence (exp. 1)
-- `exp2_1msg_*.csv`, `exp2_10msg_*.csv`, … — charge (exp. 2)
-- `exp3_log_*.csv` — journal reconnexion (exp. 3)
+## Arborescence utile
 
-## Structure
-
-| Fichier | Rôle |
-|---------|------|
-| `backend/websocket-server.js` | Push WebSocket |
-| `backend/sse-server.js` | Push SSE + API config / export |
-| `backend/webtransport-server.js` | Push WebTransport |
-| `backend/lib/` | Fréquence partagée, boucle d'envoi, export CSV |
-| `frontend/src/app/dashboard/` | Interface de mesure |
-| `data/analyze-experiments.py` | Résumé des métriques depuis les CSV |
+- `backend/websocket-server.js`, `sse-server.js`, `webtransport-server.js` — les 3 push
+- `backend/lib/` — fréquence partagée, boucle d'envoi, export
+- `frontend/src/app/dashboard/` — interface de mesure
