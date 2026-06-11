@@ -2,19 +2,16 @@ import { existsSync, mkdirSync, readFileSync, watch, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = join(__dirname, '../../data/experiment-config.json');
+const CONFIG_PATH = join(dirname(fileURLToPath(import.meta.url)), '../../data/experiment-config.json');
 const DEFAULT_MS = 1000;
 
 let intervalMs = DEFAULT_MS;
 
-function loadFromDisk() {
+function load() {
   try {
     if (!existsSync(CONFIG_PATH)) return;
-    const data = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
-    if (typeof data.intervalMs === 'number' && data.intervalMs >= 10) {
-      intervalMs = data.intervalMs;
-    }
+    const { intervalMs: ms } = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+    if (typeof ms === 'number' && ms >= 10) intervalMs = ms;
   } catch {
     /* garde la valeur en mémoire */
   }
@@ -37,9 +34,9 @@ export function setIntervalMs(ms) {
   return n;
 }
 
-loadFromDisk();
+load();
 try {
-  watch(CONFIG_PATH, () => loadFromDisk());
+  watch(CONFIG_PATH, () => load());
 } catch {
   /* fichier pas encore créé */
 }
