@@ -1,0 +1,71 @@
+\documentclass[11pt,a4paper]{article}
+
+% --------------------------------------------------
+% Packages
+% --------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{geometry}
+\usepackage{authblk}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{setspace}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{orange},
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+% --------------------------------------------------
+% Informations du journal
+% --------------------------------------------------
+
+\title{{\large\textbf{ESIEE Paris}}\\[12pt]
+\textbf{WebSocket, Server-Sent Events et WebTransport :}\\
+\textbf{comparaison des protocoles de communication temps réel pour les IHM web Angular}\\[8pt]
+{\large Exposition à la recherche --- filière informatique design, architecture et développement}\\
+{\large Cycle Ingénieur --- Année 4}}
+
+\author{Ony Brunella ANDRIATSAHAVOJAONA --- E4 INFO 2025-2026}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+% --------------------------------------------------
+% Article
+% --------------------------------------------------
+
+\input{articles/article_template.tex}
+
+\end{document}

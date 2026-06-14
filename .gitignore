@@ -1,16 +1,39 @@
-# Données d'expérience
+# Données d'expérience (volumineuses, régénérables)
 data/*.csv
 data/experiment-config.json
 !data/.gitkeep
+!data/figures/
 
-# Certificats TLS locaux
-backend/cert.pem
-backend/key.pem
+# Certificats TLS locaux (régénérables : cd backend && npm run setup:wt)
+backend/*.pem
 
-# Dépendances et builds
+# Dépendances Node
 node_modules/
+**/node_modules/
+
+# Builds frontend
 frontend/dist/
 frontend/.angular/
 
-# IDE
+# LaTeX — artefacts de compilation
+rapport/*.aux
+rapport/*.log
+rapport/*.out
+rapport/*.toc
+rapport/*.synctex.gz
+rapport/*.fdb_latexmk
+rapport/*.fls
+texput.log
+
+# IDE / éditeur
 .idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cursor (cache local)
+.cursor/

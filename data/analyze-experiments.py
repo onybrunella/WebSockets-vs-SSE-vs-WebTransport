@@ -65,4 +65,4 @@ else:
         r = exp3_stats(path)
         print(f"\n  {path.name}")
         for p in PROTOCOLS:
-            print(f"    {p:14}  reconnexion={r.get(p, '—')} ms")
+            print(f"    {p:14}  reconnexion={r.get(p, '?')} ms")

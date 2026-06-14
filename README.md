@@ -2,6 +2,16 @@
 
 Petit banc de test pour mesurer latence et débit : dashboard Angular + 3 serveurs Node.
 
+## Prérequis
+
+- **Node.js ≥ 18** (testé avec Node 24) et npm
+- **Google Chrome** ou **Edge** (WebTransport n'est pas supporté par Firefox)
+- **OpenSSL** (pour générer le certificat WebTransport)
+- **Python 3** (uniquement pour l'analyse des CSV et la génération des figures)
+
+WebSocket et SSE fonctionnent sans configuration. **WebTransport** nécessite en plus un certificat
+local (voir plus bas) et que Chrome accepte ce certificat.
+
 ## Lancer le projet
 
 Il faut 4 terminaux :
@@ -10,7 +20,7 @@ Il faut 4 terminaux :
 # backend (x3)
 cd backend && npm install
 npm run websocket      # 3001
-npm run sse            # 3002 — config + export CSV
+npm run sse            # 3002, config + export CSV
 npm run webtransport   # 3003
 
 # frontend
@@ -38,7 +48,8 @@ cd backend
 sudo ./utils/simulate-network-cut.sh 5
 ```
 
-Analyse des CSV : `python3 data/analyze-experiments.py`
+Analyse des CSV : `python3 data/analyze-experiments.py`  
+Figures LaTeX (PDF) : `python3 data/plot-experiments.py` → `data/figures/`
 
 ## Fichiers exportés
 
@@ -46,6 +57,6 @@ Tout part dans `data/` : `exp1_*.csv`, `exp2_*msg_*.csv`, `exp3_log_*.csv`
 
 ## Arborescence utile
 
-- `backend/websocket-server.js`, `sse-server.js`, `webtransport-server.js` — les 3 push
-- `backend/lib/` — fréquence partagée, boucle d'envoi, export
-- `frontend/src/app/dashboard/` — interface de mesure
+- `backend/websocket-server.js`, `sse-server.js`, `webtransport-server.js` : les 3 push
+- `backend/lib/` : fréquence partagée, boucle d'envoi, export
+- `frontend/src/app/dashboard/` : interface de mesure
