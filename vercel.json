@@ -1,0 +1,7 @@
+{
+  "framework": null,
+  "installCommand": "cd frontend && npm ci",
+  "buildCommand": "cd frontend && node scripts/write-env.mjs && npm run build",
+  "outputDirectory": "frontend/dist/frontend/browser",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

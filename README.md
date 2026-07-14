@@ -31,6 +31,17 @@ npm start              # http://localhost:4200
 WebTransport : générer le certificat une fois avec `cd backend && npm run setup:wt`.  
 Sous WSL, voir `backend/utils/certificat.txt` et `./backend/utils/launch-chrome-webtransport.sh`.
 
+## Déploiement
+
+Voir **[DEPLOY.md](./DEPLOY.md)** (Docker / VPS / Vercel / JPS).
+
+En résumé : les backends (WS/SSE/WT) vont sur un **VPS avec Docker** ; Vercel ne convient que pour le **frontend**.
+
+```bash
+cp .env.example .env
+./scripts/deploy-local.sh   # → http://localhost:8080
+```
+
 ## Les 4 expériences
 
 | Exp | But |

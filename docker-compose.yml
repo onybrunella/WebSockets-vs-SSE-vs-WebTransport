@@ -1,0 +1,78 @@
+services:
+  websocket:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["node", "websocket-server.js"]
+    environment:
+      HOST: 0.0.0.0
+      WS_PORT: 3001
+      DATA_DIR: /data
+    ports:
+      - "3001:3001"
+    volumes:
+      - bench-data:/data
+    restart: unless-stopped
+
+  sse:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["node", "sse-server.js"]
+    environment:
+      HOST: 0.0.0.0
+      SSE_PORT: 3002
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      DATA_DIR: /data
+    ports:
+      - "3002:3002"
+    volumes:
+      - bench-data:/data
+    restart: unless-stopped
+
+  webtransport:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        if [ ! -f cert.pem ] || [ ! -f key.pem ]; then
+          echo "Génération certificat WebTransport (self-signed)…"
+          openssl ecparam -name prime256v1 -genkey -noout -out key.pem
+          openssl req -x509 -key key.pem -out cert.pem -days 13 -subj "/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+          openssl x509 -in cert.pem -pubkey -noout | openssl pkey -pubin -outform der \
+            | openssl dgst -sha256 -binary | base64 | tee /tmp/wt-hash.txt
+        fi
+        exec node webtransport-server.js
+    environment:
+      HOST: 0.0.0.0
+      WT_PORT: 3003
+      DATA_DIR: /data
+    ports:
+      - "3003:3003/udp"
+      - "3003:3003/tcp"
+    volumes:
+      - bench-data:/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      # URLs vues par le navigateur (pas les noms Docker internes)
+      WS_URL: ${WS_URL:-ws://localhost:3001}
+      SSE_URL: ${SSE_URL:-http://localhost:3002}
+      WT_URL: ${WT_URL:-https://127.0.0.1:3003}
+    ports:
+      - "8080:80"
+    depends_on:
+      - websocket
+      - sse
+    restart: unless-stopped
+
+volumes:
+  bench-data:

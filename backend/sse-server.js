@@ -9,12 +9,13 @@ import {
   setPaused,
 } from './lib/config-store.js';
 import { buildMessage, startPushLoop } from './lib/push-loop.js';
+import { corsOrigins, envInt, envStr } from './lib/env.js';
 
-// SSE + routes config/export (un seul serveur pour éviter de dupliquer l'API)
 const app = express();
-const PORT = 3002;
+const PORT = envInt('SSE_PORT', envInt('PORT', 3002));
+const HOST = envStr('HOST', '0.0.0.0');
 
-app.use(cors());
+app.use(cors({ origin: corsOrigins() }));
 app.use(express.json({ limit: '10mb' }));
 
 function configPayload() {
@@ -24,6 +25,10 @@ function configPayload() {
     paused: getPaused(),
   };
 }
+
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, service: 'sse' });
+});
 
 app.get('/api/config/interval', (_req, res) => {
   res.json(configPayload());
@@ -46,6 +51,7 @@ app.get('/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
 
   const stop = startPushLoop(() => {
     res.write(`data: ${JSON.stringify(buildMessage('sse'))}\n\n`);
@@ -57,6 +63,6 @@ app.get('/events', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`SSE server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`SSE server running on http://${HOST}:${PORT}`);
 });

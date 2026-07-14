@@ -15,6 +15,10 @@ node_modules/
 frontend/dist/
 frontend/.angular/
 
+# Env local
+.env
+.env.local
+
 # LaTeX — artefacts de compilation
 rapport/*.aux
 rapport/*.log
@@ -35,5 +39,5 @@ texput.log
 .DS_Store
 Thumbs.db
 
-# Cursor (cache local)
+# Cache éditeurs locaux
 .cursor/
