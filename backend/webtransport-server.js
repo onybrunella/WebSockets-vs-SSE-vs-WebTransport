@@ -1,14 +1,18 @@
 import { Http2Server } from '@fails-components/webtransport';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { networkInterfaces } from 'os';
 import { execSync } from 'child_process';
 import { buildMessage, startPushLoop } from './lib/push-loop.js';
+import { envInt, envStr } from './lib/env.js';
 
-const PORT = 3003;
+const PORT = envInt('WT_PORT', envInt('PORT', 3003));
+const HOST = envStr('HOST', '0.0.0.0');
+const CERT_PATH = envStr('WT_CERT', './cert.pem');
+const KEY_PATH = envStr('WT_KEY', './key.pem');
 
 function certHash() {
   try {
-    const pub = execSync('openssl x509 -in cert.pem -pubkey -noout');
+    const pub = execSync(`openssl x509 -in ${CERT_PATH} -pubkey -noout`);
     const der = execSync('openssl pkey -pubin -outform der', { input: pub });
     return execSync('openssl dgst -sha256 -binary | base64', { input: der }).toString().trim();
   } catch {
@@ -26,12 +30,21 @@ function lanIps() {
   return [...ips];
 }
 
+if (!existsSync(CERT_PATH) || !existsSync(KEY_PATH)) {
+  console.error(
+    `Certificat WebTransport manquant (${CERT_PATH} / ${KEY_PATH}).\n` +
+      '  → local : cd backend && npm run setup:wt\n' +
+      '  → Docker : le conteneur génère le certificat au démarrage',
+  );
+  process.exit(1);
+}
+
 const server = new Http2Server({
   port: PORT,
-  host: '0.0.0.0',
-  secret: 'mysecret',
-  cert: readFileSync('./cert.pem', 'utf8'),
-  privKey: readFileSync('./key.pem', 'utf8'),
+  host: HOST,
+  secret: envStr('WT_SECRET', 'mysecret'),
+  cert: readFileSync(CERT_PATH, 'utf8'),
+  privKey: readFileSync(KEY_PATH, 'utf8'),
 });
 
 const sessions = server.sessionStream('/webtransport');
@@ -65,9 +78,9 @@ async function onSession(session) {
 
 (async () => {
   await server.ready;
-  console.log(`WebTransport sur le port ${PORT}`);
+  console.log(`WebTransport sur ${HOST}:${PORT}`);
   console.log(`  Hash SPKI (wt-config.ts) : ${certHash()}`);
-  for (const ip of lanIps()) console.log(`  → wss://${ip}:${PORT}/webtransport`);
+  for (const ip of lanIps()) console.log(`  → https://${ip}:${PORT}/webtransport`);
 
   const reader = sessions.getReader();
   while (true) {

@@ -1,0 +1,56 @@
+type: install
+name: WebSocket vs SSE vs WebTransport
+version: 1.0.0
+homepage: https://github.com/onybrunella/websockets-vs-sse-vs-webtransport
+baseUrl: https://github.com/onybrunella/websockets-vs-sse-vs-webtransport
+description: |
+  Banc de test Angular + 3 serveurs Node (WebSocket, SSE, WebTransport).
+  Déploie 4 conteneurs Docker : frontend (nginx), websocket:3001, sse:3002, webtransport:3003.
+
+categories:
+  - apps/dev-tools
+
+globals:
+  startPage: /
+
+settings:
+  fields:
+    - type: string
+      name: corsOrigins
+      caption: CORS origins (front)
+      value: "*"
+      required: true
+
+nodes:
+  startCount: 1
+  nodeType: docker
+  nodeGroup: cp
+  displayName: Bench UI + push servers
+  docker:
+    image: docker-compose
+  volumes:
+    - path: /data
+      readOnly: false
+
+onInstall:
+  - cmd[cp]: |-
+      set -e
+      cd /tmp
+      curl -fsSL "${baseUrl}/archive/refs/heads/main.tar.gz" -o src.tgz || \
+        curl -fsSL "https://codeload.github.com/onybrunella/websockets-vs-sse-vs-webtransport/tar.gz/refs/heads/main" -o src.tgz
+      mkdir -p /opt/bench && tar -xzf src.tgz -C /opt/bench --strip-components=1
+      cd /opt/bench
+      export CORS_ORIGINS="${settings.corsOrigins}"
+      docker compose up -d --build
+  - cmd[cp]: docker compose -f /opt/bench/docker-compose.yml ps
+
+success:
+  text: |
+    Déploiement lancé via Docker Compose.
+    - Frontend : http://${env.domain}:8080
+    - WebSocket : ws://${env.domain}:3001
+    - SSE : http://${env.domain}:3002
+    - WebTransport : https://${env.domain}:3003/webtransport
+
+    Pensez à ouvrir les ports 8080, 3001, 3002, 3003 (TCP) et 3003 (UDP) dans le firewall JPS.
+    WebTransport nécessite Chrome/Edge et un certificat accepté (self-signed en démo).

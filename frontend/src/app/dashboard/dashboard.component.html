@@ -1,0 +1,122 @@
+<header class="top">
+  <div>
+    <p class="eyebrow">Banc de test</p>
+    <h1>WebSocket · SSE · WebTransport</h1>
+    <p class="lede">Mesure de latence et de débit sur un dashboard Angular temps réel.</p>
+  </div>
+  <div class="urls">
+    <code>WS {{ api.wsUrl }}</code>
+    <code>SSE {{ api.sseBase }}</code>
+    <code>WT {{ api.wtBase }}</code>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Expériences">
+  <button type="button" [class.active]="tab === 'live'" (click)="setTab('live')">Live</button>
+  <button type="button" [class.active]="tab === 'exp1'" (click)="setTab('exp1')">Exp. 1</button>
+  <button type="button" [class.active]="tab === 'exp2'" (click)="setTab('exp2')">Exp. 2</button>
+  <button type="button" [class.active]="tab === 'exp3'" (click)="setTab('exp3')">Exp. 3</button>
+</nav>
+
+<section class="controls">
+  <label>
+    Intervalle (ms)
+    <input type="number" min="10" max="60000" [(ngModel)]="intervalMs" />
+  </label>
+  <button type="button" class="primary" (click)="applyInterval()">Appliquer</button>
+  <button type="button" (click)="togglePause()">{{ paused ? 'Reprendre' : 'Pause' }}</button>
+  <label class="check">
+    <input type="checkbox" [(ngModel)]="autoReconnect" />
+    Reconnexion auto
+  </label>
+  <button type="button" (click)="connectAll()">Reconnecter tout</button>
+  <button type="button" (click)="exportCsv()">Export CSV</button>
+</section>
+
+@if (exportStatus) {
+  <p class="status-line">{{ exportStatus }}</p>
+}
+
+<section class="cards">
+  @for (p of protocols; track p) {
+    <article [class.ok]="stats[p].connected" [class.ko]="!stats[p].connected">
+      <header>
+        <h2>{{ label(p) }}</h2>
+        <span class="pill">{{ stats[p].status }}</span>
+      </header>
+      <dl>
+        <div><dt>Messages</dt><dd>{{ stats[p].count }}</dd></div>
+        <div><dt>Dernière latence</dt><dd>{{ stats[p].lastLatency ?? '—' }} ms</dd></div>
+        <div><dt>Moyenne</dt><dd>{{ stats[p].avgLatency === null ? '—' : (stats[p].avgLatency | number:'1.2-2') }} ms</dd></div>
+        <div><dt>Valeur</dt><dd>{{ stats[p].lastValue === null ? '—' : (stats[p].lastValue | number:'1.1-1') }}</dd></div>
+      </dl>
+      <button type="button" (click)="reconnect(p)">Reconnecter</button>
+    </article>
+  }
+</section>
+
+@if (wtError) {
+  <p class="warn">WebTransport : {{ wtError }}</p>
+}
+
+@if (tab === 'live') {
+  <section class="panel">
+    <h2>Vue live</h2>
+    <p>
+      Les trois protocoles poussent un message JSON
+      <code>&#123; protocol, timestamp, value &#125;</code>.
+      La latence est <code>Date.now() − timestamp</code> côté Angular.
+    </p>
+    <p class="hint">
+      WebTransport (Chrome/Edge) : ouvrir l’app via
+      <code>http://{{ wtHostWithPort }}</code> si besoin,
+      certificat via <code>cd backend &amp;&amp; npm run setup:wt</code>.
+    </p>
+  </section>
+}
+
+@if (tab === 'exp1') {
+  <section class="panel">
+    <h2>Exp. 1 — Latence à 1 msg/s</h2>
+    <p>2 minutes à 1 message/s, les trois protocoles connectés. Videz les mesures puis lancez le chrono.</p>
+    <div class="row">
+      <button type="button" class="primary" (click)="prepareExp1()">Préparer</button>
+      <button type="button" (click)="exportCsv('exp1')">Export exp1_*.csv</button>
+    </div>
+  </section>
+}
+
+@if (tab === 'exp2') {
+  <section class="panel">
+    <h2>Exp. 2 — Charge 1 / 10 / 50 / 100 msg/s</h2>
+    <p>Une minute par palier. Changez la fréquence serveur, laissez tourner, exportez.</p>
+    <div class="row">
+      <button type="button" (click)="setRate(1)">1/s</button>
+      <button type="button" (click)="setRate(10)">10/s</button>
+      <button type="button" (click)="setRate(50)">50/s</button>
+      <button type="button" (click)="setRate(100)">100/s</button>
+      <button type="button" class="primary" (click)="runExp2Ladder()">Enchaîner paliers</button>
+      <button type="button" (click)="exportCsv('exp2')">Export CSV</button>
+    </div>
+  </section>
+}
+
+@if (tab === 'exp3') {
+  <section class="panel">
+    <h2>Exp. 3 — Coupure réseau & reconnexion</h2>
+    <p>
+      Préparez, puis côté machine :
+      <code>cd backend && sudo ./utils/simulate-network-cut.sh 5</code>
+    </p>
+    <div class="row">
+      <button type="button" class="primary" (click)="prepareExp3()">Préparer</button>
+      <button type="button" (click)="markCut()">Marquer coupure</button>
+      <button type="button" (click)="exportExp3Journal()">Export journal</button>
+    </div>
+    <ul class="log">
+      @for (e of exp3Log.slice().reverse().slice(0, 40); track e.t + e.event) {
+        <li><time>{{ e.t | date:'HH:mm:ss.SSS' }}</time> {{ e.event }}</li>
+      }
+    </ul>
+  </section>
+}
