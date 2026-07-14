@@ -2,14 +2,16 @@ import { existsSync, mkdirSync, readFileSync, watch, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
-const CONFIG_PATH = join(dirname(fileURLToPath(import.meta.url)), '../../data/experiment-config.json');
+const DATA_DIR =
+  process.env.DATA_DIR || join(dirname(fileURLToPath(import.meta.url)), '../../data');
+const CONFIG_PATH = join(DATA_DIR, 'experiment-config.json');
 const DEFAULT_MS = 1000;
 
 let intervalMs = DEFAULT_MS;
 let paused = false;
 
 function writeConfig() {
-  mkdirSync(dirname(CONFIG_PATH), { recursive: true });
+  mkdirSync(DATA_DIR, { recursive: true });
   writeFileSync(CONFIG_PATH, JSON.stringify({ intervalMs, paused }, null, 2));
 }
 
@@ -53,7 +55,10 @@ export function setIntervalMs(ms) {
 
 load();
 try {
-  watch(CONFIG_PATH, () => load());
+  mkdirSync(DATA_DIR, { recursive: true });
+  watch(DATA_DIR, (event, filename) => {
+    if (!filename || filename === 'experiment-config.json') load();
+  });
 } catch {
-  /* fichier pas encore créé */
+  /* FS non disponible */
 }

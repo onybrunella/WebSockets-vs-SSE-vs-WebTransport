@@ -1,0 +1,31 @@
+type: install
+name: WebSocket vs SSE vs WebTransport
+version: 1.0.0
+baseUrl: https://github.com/onybrunella/WebSockets-vs-SSE-vs-WebTransport
+description: Banc de test Angular + 3 serveurs Node (WebSocket, SSE, WebTransport) via Docker Compose.
+
+nodes:
+  startCount: 1
+  nodeType: docker
+  nodeGroup: cp
+  displayName: Bench UI + push servers
+
+onInstall:
+  - cmd[cp]: |-
+      set -e
+      mkdir -p /opt/bench
+      curl -fsSL "https://codeload.github.com/onybrunella/WebSockets-vs-SSE-vs-WebTransport/tar.gz/refs/heads/main" -o /tmp/src.tgz
+      tar -xzf /tmp/src.tgz -C /opt/bench --strip-components=1
+      cd /opt/bench
+      cp -n .env.example .env || true
+      docker compose up -d --build
+
+success:
+  text: |
+    Déploiement lancé.
+    - Frontend : http://${env.domain}:8080
+    - WebSocket : ws://${env.domain}:3001
+    - SSE : http://${env.domain}:3002
+    - WebTransport : https://${env.domain}:3003/webtransport
+
+    Ouvre les ports 8080, 3001, 3002, 3003/tcp et 3003/udp.

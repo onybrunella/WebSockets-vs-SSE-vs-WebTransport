@@ -2,7 +2,8 @@ import { ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MetricsService } from '../services/metrics.service';
 import { WebTransportPonyfill as WebTransportClient } from '@fails-components/webtransport/browser';
-import { SSE_PORT, WS_PORT, WT_HASH_BASE64, WT_PORT, WT_SETUP_HOST } from '../wt-config';
+import { sseApiUrl, wsUrl, wtSessionUrl } from '../deploy-config';
+import { WT_HASH_BASE64, WT_SETUP_HOST } from '../wt-config';
 
 @Component({
   selector: 'app-dashboard',
@@ -255,7 +256,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private async postIntervalMs(ms: number): Promise<void> {
-    const res = await fetch(this.sseApiUrl('/api/config/interval'), {
+    const res = await fetch(sseApiUrl('/api/config/interval'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ intervalMs: ms, paused: false }),
@@ -268,7 +269,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   async fetchServerInterval(): Promise<void> {
     try {
-      const res = await fetch(this.sseApiUrl('/api/config/interval'));
+      const res = await fetch(sseApiUrl('/api/config/interval'));
       if (!res.ok) return;
       const body = await this.readServerConfig(res);
       if (body.paused) {
@@ -287,7 +288,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     paused: boolean,
     opts: { silent?: boolean } = {},
   ): Promise<void> {
-    const res = await fetch(this.sseApiUrl('/api/config/interval'), {
+    const res = await fetch(sseApiUrl('/api/config/interval'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paused }),
@@ -417,7 +418,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ): Promise<void> {
     this.exportMessage = null;
     try {
-      const res = await fetch(this.sseApiUrl('/api/export/csv'), {
+      const res = await fetch(sseApiUrl('/api/export/csv'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ measurements, prefix }),
@@ -446,15 +447,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   barHeight(latency: number, max: number): number {
     const cap = max > 0 ? max : 1;
     return Math.max(4, Math.round((latency / cap) * 100));
-  }
-
-  /** Même hôte que la page (obligatoire exp. 3 WSL : évite localhost côté Windows). */
-  private backendHost(): string {
-    return window.location.hostname || WT_SETUP_HOST;
-  }
-
-  private sseApiUrl(path: string): string {
-    return `http://${this.backendHost()}:${SSE_PORT}${path}`;
   }
 
   linkBadge(phase: string, reconnectMs: number | null): string {
@@ -548,7 +540,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.wsManualOff = false;
     clearTimeout(this.wsReconnectTimer);
     this.wsSocket?.close();
-    this.wsSocket = new WebSocket(`ws://${this.backendHost()}:${WS_PORT}`);
+    this.wsSocket = new WebSocket(wsUrl());
 
     this.wsSocket.onopen = () => {
       this.wsConnected = true;
@@ -623,7 +615,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.sseManualOff = false;
     clearTimeout(this.sseReconnectTimer);
     this.sseSource?.close();
-    this.sseSource = new EventSource(this.sseApiUrl('/events'));
+    this.sseSource = new EventSource(sseApiUrl('/events'));
 
     this.sseSource.onopen = () => {
       this.sseConnected = true;
@@ -732,7 +724,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         hashBytes.byteOffset + hashBytes.byteLength,
       ) as ArrayBuffer;
 
-      this.wtTransport = new WebTransportClient('https://' + host + ':' + WT_PORT + '/webtransport', {
+      this.wtTransport = new WebTransportClient(wtSessionUrl(), {
         serverCertificateHashes: [{ algorithm: 'sha-256', value: hashBuffer }],
       });
 
