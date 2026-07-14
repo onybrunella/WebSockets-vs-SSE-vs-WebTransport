@@ -1,0 +1,26 @@
+{
+  "name": "frontend",
+  "version": "0.0.0",
+  "scripts": {
+    "start": "ng serve --host 0.0.0.0",
+    "postinstall": "bash ../backend/scripts/patch-webtransport-browser.sh 2>/dev/null || true",
+    "build": "ng build"
+  },
+  "private": true,
+  "packageManager": "npm@11.12.1",
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@fails-components/webtransport": "^1.6.2",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.11",
+    "@angular/cli": "^21.2.11",
+    "@angular/compiler-cli": "^21.2.0",
+    "typescript": "~5.9.2"
+  }
+}
