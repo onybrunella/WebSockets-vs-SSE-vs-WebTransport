@@ -1,0 +1,13 @@
+html {
+  font-size: 17px;
+}
+
+html,
+body,
+app-root {
+  margin: 0;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+  background: #f0f2f5;
+}

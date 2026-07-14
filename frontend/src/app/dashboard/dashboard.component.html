@@ -1,0 +1,163 @@
+<div class="dashboard">
+  <header class="toolbar">
+    <div class="timer-row" [class.running]="timerRunning" [class.done]="timerDone">
+      <span class="timer-label">Chronomètre</span>
+      <span class="timer-display">{{ timerText }}</span>
+      <div class="timer-presets">
+        <button type="button" class="chip" [class.on]="timerSeconds === 30" (click)="setTimer(30)">30 s</button>
+        <button type="button" class="chip" [class.on]="timerSeconds === 60" (click)="setTimer(60)">1 min</button>
+        <button type="button" class="chip" [class.on]="timerSeconds === 120" (click)="setTimer(120)">2 min</button>
+      </div>
+      <div class="timer-controls">
+        <button type="button" class="chip primary" (click)="startCountdown()" [disabled]="timerRunning">
+          {{ timerDone ? 'Relancer' : 'Démarrer' }}
+        </button>
+        <button type="button" class="chip" (click)="pauseCountdown()" [disabled]="!timerRunning">Pause</button>
+        <button type="button" class="chip" (click)="resetCountdown()">Réinitialiser</button>
+      </div>
+      <span class="timer-msg" *ngIf="timerMessage">{{ timerMessage }}</span>
+    </div>
+
+    <div class="actions-row">
+      <button class="primary" (click)="reconnectAll()">Lancer les 3 connexions</button>
+      <button
+        type="button"
+        class="pause-btn"
+        [class.on]="serversPaused"
+        [disabled]="!serversPaused && !(wsConnected && sseConnected && wtConnected)"
+        (click)="toggleServerPause()"
+      >
+        {{ serversPaused ? 'Reprendre messages' : 'Stopper messages' }}
+      </button>
+      <button (click)="exportCSV()">Exporter CSV</button>
+      <button (click)="clearMeasurements()">Effacer mesures</button>
+    </div>
+  </header>
+
+  <section class="exp-bar">
+    <button type="button" class="tab" [class.on]="activeExp === 1" (click)="setActiveExp(1)">Exp. 1</button>
+    <button type="button" class="tab" [class.on]="activeExp === 2" (click)="setActiveExp(2)">Exp. 2</button>
+    <button type="button" class="tab" [class.on]="activeExp === 3" (click)="setActiveExp(3)">Exp. 3</button>
+
+    <div class="exp-actions" *ngIf="activeExp === 1">
+      <button type="button" class="chip" [class.on]="expPrepared === 1" (click)="prepareExp1()">
+        {{ expPrepared === 1 ? 'Préparé (1 msg/s)' : 'Préparer (1 msg/s)' }}
+      </button>
+    </div>
+
+    <div class="exp-actions" *ngIf="activeExp === 2">
+      <button type="button" class="chip" [class.on]="serverIntervalMs === 1000" (click)="applyExp2Rate(1000, 'exp2_1msg')">1/s</button>
+      <button type="button" class="chip" [class.on]="serverIntervalMs === 100" (click)="applyExp2Rate(100, 'exp2_10msg')">10/s</button>
+      <button type="button" class="chip" [class.on]="serverIntervalMs === 20" (click)="applyExp2Rate(20, 'exp2_50msg')">50/s</button>
+      <button type="button" class="chip" [class.on]="serverIntervalMs === 10" (click)="applyExp2Rate(10, 'exp2_100msg')">100/s</button>
+    </div>
+
+    <div class="exp-actions" *ngIf="activeExp === 3">
+      <button type="button" class="chip" [class.on]="expPrepared === 3" (click)="prepareExp3()">
+        {{ expPrepared === 3 ? 'Préparé' : 'Préparer' }}
+      </button>
+      <button type="button" class="chip" [class.on]="exp3CutMarked" (click)="markNetworkCut()">
+        {{ exp3CutMarked ? 'Coupure marquée' : 'Marquer coupure' }}
+      </button>
+      <button type="button" class="chip" (click)="exportExp3Log()">Export journal</button>
+      <label class="chk">
+        <input type="checkbox" [checked]="autoReconnect" (change)="autoReconnect = $any($event.target).checked" />
+        Reconnexion auto
+      </label>
+    </div>
+  </section>
+
+  <p class="exp-instructions">
+    <strong>Exp. {{ activeExp }}</strong> : {{ expInstructions }}
+  </p>
+
+  <p
+    class="status-line"
+    *ngIf="exportMessage || showPauseBanner || configMessage || exp3Message"
+    [class.ok]="!!exportMessage"
+    [class.warn]="timerDone || showPauseBanner"
+  >
+    <ng-container *ngIf="exportMessage">{{ exportMessage }}</ng-container>
+    <ng-container *ngIf="!exportMessage && showPauseBanner">
+      Messages stoppés côté serveur. Cliquer sur « Reprendre messages » avant de mesurer.
+    </ng-container>
+    <ng-container *ngIf="!exportMessage && !showPauseBanner && (configMessage || exp3Message)">
+      {{ configMessage || exp3Message }}
+      <span *ngIf="activeExp === 3 && !configMessage">
+        | WS {{ lastReconnectWs ?? '?' }} ms | SSE {{ lastReconnectSse ?? '?' }} ms | WT {{ lastReconnectWt ?? '?' }} ms
+      </span>
+    </ng-container>
+  </p>
+
+  <div class="cards">
+    <div
+      class="card"
+      [class.connected]="wsPhase === 'on' || wsPhase === 'reconnected'"
+      [class.link-reconnecting]="wsPhase === 'reconnecting'"
+      [class.link-reconnected]="wsPhase === 'reconnected'"
+    >
+      <div class="card-head">
+        <strong>WebSocket</strong>
+        <span class="link-badge" [class]="'link-' + wsPhase">{{ linkBadge(wsPhase, lastReconnectWs) }}</span>
+      </div>
+      <div class="metrics">
+        <div><span>Valeur</span><b>{{ wsLastValue }}</b></div>
+        <div><span>Moy.</span><b>{{ wsAvgLatency }} ms</b></div>
+        <div><span>Min/Max</span><b>{{ wsMinLatency }}/{{ wsMaxLatency }}</b></div>
+        <div><span>Débit</span><b>{{ wsThroughput }}/s</b></div>
+      </div>
+      <p class="chart-title">Latence (30 derniers messages)</p>
+      <div class="chart">
+        <div *ngFor="let l of wsLatencies" class="bar" [style.height.%]="barHeight(l, wsChartMax)" [title]="l + ' ms'"></div>
+        <span class="chart-empty" *ngIf="!wsLatencies.length">En attente de données…</span>
+      </div>
+    </div>
+
+    <div
+      class="card"
+      [class.connected]="ssePhase === 'on' || ssePhase === 'reconnected'"
+      [class.link-reconnecting]="ssePhase === 'reconnecting'"
+      [class.link-reconnected]="ssePhase === 'reconnected'"
+    >
+      <div class="card-head">
+        <strong>SSE</strong>
+        <span class="link-badge" [class]="'link-' + ssePhase">{{ linkBadge(ssePhase, lastReconnectSse) }}</span>
+      </div>
+      <div class="metrics">
+        <div><span>Valeur</span><b>{{ sseLastValue }}</b></div>
+        <div><span>Moy.</span><b>{{ sseAvgLatency }} ms</b></div>
+        <div><span>Min/Max</span><b>{{ sseMinLatency }}/{{ sseMaxLatency }}</b></div>
+        <div><span>Débit</span><b>{{ sseThroughput }}/s</b></div>
+      </div>
+      <p class="chart-title">Latence (30 derniers messages)</p>
+      <div class="chart">
+        <div *ngFor="let l of sseLatencies" class="bar" [style.height.%]="barHeight(l, sseChartMax)" [title]="l + ' ms'"></div>
+        <span class="chart-empty" *ngIf="!sseLatencies.length">En attente de données…</span>
+      </div>
+    </div>
+
+    <div
+      class="card"
+      [class.connected]="wtPhase === 'on' || wtPhase === 'reconnected'"
+      [class.link-reconnecting]="wtPhase === 'reconnecting'"
+      [class.link-reconnected]="wtPhase === 'reconnected'"
+    >
+      <div class="card-head">
+        <strong>WebTransport</strong>
+        <span class="link-badge" [class]="'link-' + wtPhase">{{ linkBadge(wtPhase, lastReconnectWt) }}</span>
+      </div>
+      <p class="wt-error" *ngIf="wtError">{{ wtError }}</p>
+      <div class="metrics">
+        <div><span>Valeur</span><b>{{ wtLastValue }}</b></div>
+        <div><span>Moy.</span><b>{{ wtAvgLatency }} ms</b></div>
+        <div><span>Min/Max</span><b>{{ wtMinLatency }}/{{ wtMaxLatency }}</b></div>
+        <div><span>Débit</span><b>{{ wtThroughput }}/s</b></div>
+      </div>
+      <p class="chart-title">Latence (30 derniers messages)</p>
+      <div class="chart">
+        <div *ngFor="let l of wtLatencies" class="bar" [style.height.%]="barHeight(l, wtChartMax)" [title]="l + ' ms'"></div>
+        <span class="chart-empty" *ngIf="!wtLatencies.length">En attente de données…</span>
+      </div>
+    </div>
+  </div>
+</div>
